@@ -1,0 +1,11 @@
+{
+  "name": "Cursor Sprite",
+  "version": "0.1.23",
+  "contactEmailAddress": "Dylan@quspace.agency",
+  "requiredDependencies": {},
+  "optionalDependencies": {},
+  "requiredPermissions": [],
+  "optionalPermissions": [],
+  "dependencies": {},
+  "hasRibbonIcon": true
+}

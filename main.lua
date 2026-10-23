@@ -22,7 +22,7 @@
 
 local PLUGIN_NAME = "Cursor Sprite"
 local helpers = require("ui_helpers")
-helpers.VERSION = "0.1.23"
+helpers.VERSION = "0.1.24"
 local H = helpers
 
 -------------------------------------------------------------------------------
@@ -520,7 +520,7 @@ local function layout()
     local y = H.PAD + helpers.TITLE_HEIGHT + 4
     -- 0.1.23 line 1: Cursor on/off, On-point/Offset, Favorites, Recent
     local sx = COL_PAD
-    for _, c in ipairs({ { onBtn, 84 }, { posBtn, 72 }, { offUI.favB, 104 }, { offUI.recB, 84 } }) do
+    for _, c in ipairs({ { onBtn, 84 }, { posBtn, 84 }, { offUI.favB, 104 }, { offUI.recB, 84 } }) do
         helpers.safe(function() c[1]:SetPos(sx, y) end); sx = sx + c[2] + 4
     end
     y = y + H.BTN_H + CTRL_GAP
@@ -560,11 +560,11 @@ local function layout()
     helpers.safe(function() d.down:SetPos(COL_PAD + DW + 2, y + 2 * (H.BTN_H + 2)) end)
     local rx = COL_PAD + 3 * (DW + 2) + 12
     sx = rx
-    for _, c in ipairs({ { offUI.stepB, 62 }, { offUI.resetB, 48 }, { offUI.saveB, 96 } }) do
+    for _, c in ipairs({ { offUI.stepB, 74 }, { offUI.resetB, 48 }, { offUI.saveB, 96 } }) do
         helpers.safe(function() c[1]:SetPos(sx, y) end); sx = sx + c[2] + 4
     end
     sx = rx
-    for _, c in ipairs({ { offUI.preB, 76 }, { offUI.loadB, 44 }, { offUI.storeB, 48 } }) do
+    for _, c in ipairs({ { offUI.preB, 84 }, { offUI.loadB, 44 }, { offUI.storeB, 48 } }) do
         helpers.safe(function() c[1]:SetPos(sx, y + 2 * (H.BTN_H + 2)) end); sx = sx + c[2] + 4
     end
     y = y + 3 * (H.BTN_H + 2) + CTRL_GAP
@@ -584,7 +584,7 @@ local function layout()
     y = y + H.ROW_HEIGHT + 4
     -- status line, Letter filter at its right
     helpers.safe(function() statusText:SetPos(COL_PAD, y + ty) end)
-    helpers.safe(function() letterBtn:SetPos(-(COL_PAD + 90), y, 1.0, 0.0) end)
+    helpers.safe(function() letterBtn:SetPos(-(COL_PAD + 100), y, 1.0, 0.0) end)
     y = y + H.BTN_H + 4
     helpers.safe(function() headCells.icon:SetPos(COL_PAD, y) end)
     helpers.safe(function() headCells.idt:SetPos(ID_X, y) end)
@@ -652,24 +652,23 @@ local function setItemFromBox()
 end
 
 local function buildPanel(root)
-    posBtn = helpers.button(root, 0, 0, 72, H.BTN_H, POS_LABEL[state.pos], function()
-        state.pos = state.pos % 2 + 1; save()
-        helpers.setText(posBtn, POS_LABEL[state.pos], "label")
-        refresh()
-    end)
+    -- 0.1.24: option pickers are RuneScape-style dropdowns (helpers.dropdown)
+    posBtn = helpers.dropdown(root, 0, 0, 84, H.BTN_H, { options = POS_LABEL, name = "pos",
+        get = function() return state.pos end, set = function(i) state.pos = i; save() end,
+        onChange = function() refresh() end })
     onBtn = helpers.button(root, 0, 0, 84, H.BTN_H, onLabel(), function()
         state.on = not state.on; save(); helpers.setText(onBtn, onLabel(), "label"); refresh()
     end)
-    setBtn = helpers.button(root, 0, 0, 96, H.BTN_H, setLabel(), function()
-        local i = 1
-        for k, v in ipairs(SETS) do if v == state.set then i = k end end
-        state.set = SETS[i % #SETS + 1]; save()
-        helpers.setText(setBtn, setLabel(), "label")
-        -- 0.1.22: a search typed for one set no longer empties the next one
-        filterText, lastFilterSeen = "", ""
-        helpers.safe(function() searchField.content = "" end)
-        rebuildFilter(); goPage(1); refresh()
-    end)
+    do local L = {}; for i, v in ipairs(SETS) do L[i] = "Set: " .. SET_LABEL[v] end
+    setBtn = helpers.dropdown(root, 0, 0, 110, H.BTN_H, { options = L, name = "set",
+        get = function() for k, v in ipairs(SETS) do if v == state.set then return k end end; return 1 end,
+        set = function(i) state.set = SETS[i]; save() end,
+        onChange = function()
+            -- 0.1.22: a search typed for one set no longer empties the next one
+            filterText, lastFilterSeen = "", ""
+            helpers.safe(function() searchField.content = "" end)
+            rebuildFilter(); goPage(1); refresh()
+        end }) end
     -- 0.1.19: Size, Rotation, Offset X and Offset Y are typed boxes (numbers
     -- only, clamped, applied on Enter or when the box loses focus) with
     -- - and + buttons. Offset changes (arrows, boxes, +/-) also save the
@@ -694,10 +693,10 @@ local function buildPanel(root)
     showVals = function()
         boxSet(offUI.size.box, state.scale); boxSet(offUI.rot.box, state.rot)
         boxSet(offUI.x.box, state.offX); boxSet(offUI.y.box, state.offY)
-        helpers.setText(offUI.stepB, "Step: " .. STEPS[state.step], "label")
+        offUI.stepB:refresh()
         helpers.setText(offUI.favB, state.favMode and "All sprites" or ("Favorites (" .. #favList .. ")"), "label")
         if offUI.recB then helpers.setText(offUI.recB, state.recentMode and "All sprites" or ("Recent (" .. #state.recent .. ")"), "label") end
-        if offUI.preB then helpers.setText(offUI.preB, "Preset " .. state.preset, "label") end
+        if offUI.preB then offUI.preB:refresh() end
     end
     local function apply(field, v, isOffset)
         if field == "scale" then state.scale = clampScale(v)
@@ -763,8 +762,13 @@ local function buildPanel(root)
         down = rb("Down", 44, function() nudge(0, 1) end),
     }
     for _, b in pairs(offUI.dpad) do helpers.setTip(b, function() return "Move the image " .. STEPS[state.step] .. " unit(s). The red crosshair marks the pointer tip for 3 s." end) end
-    offUI.stepB = rb("Step: 1", 62, function() state.step = state.step % #STEPS + 1; save(); showVals() end)
-    helpers.setTip(offUI.stepB, "How far one D-pad, - or + click moves or rotates (1, 5, 10, 15, 90).")
+    local function rdd(w, L, get, set, name)
+        local d = helpers.dropdown(root, 0, 0, w, H.BTN_H, { options = L, name = name, get = get, set = set, onChange = function() showVals() end })
+        offUI.row[#offUI.row + 1] = { c = d, w = w }; return d
+    end
+    do local L = {}; for i, v in ipairs(STEPS) do L[i] = "Step: " .. v end
+    offUI.stepB = rdd(74, L, function() return state.step end, function(i) state.step = i; save() end, "step") end
+    helpers.setTip(offUI.stepB.box, "How far one D-pad, - or + click moves or rotates (1, 5, 10, 15, 90).")
     offUI.resetB = rb("Reset", 48, function() state.offX, state.offY = 0, 0; save(); showVals(); editTicks = 150; pcall(tickOverlay) end)
     helpers.setTip(offUI.resetB, "Offset back to 0, 0 (image top-left on the pointer tip).")
     offUI.saveB = rb("Save position", 96, function() saveFav(); showVals(); bindRows(); helpers.showToast("Saved to Favorites", 2) end)
@@ -782,8 +786,8 @@ local function buildPanel(root)
         if type(p) ~= "table" then return "Preset " .. i .. ": empty" end
         return "Preset " .. i .. ": " .. p.scale .. "%, " .. p.rot .. " deg, offset " .. p.offX .. "," .. p.offY
     end
-    offUI.preB = rb("Preset 1", 76, function() state.preset = state.preset % 4 + 1; save(); showVals() end)
-    helpers.setTip(offUI.preB, function() return preDesc(state.preset) .. ". Click to choose another slot." end)
+    offUI.preB = rdd(84, { "Preset 1", "Preset 2", "Preset 3", "Preset 4" }, function() return state.preset end, function(i) state.preset = i; save() end, "preset")
+    helpers.setTip(offUI.preB.box, function() return preDesc(state.preset) .. ". Pick a slot." end)
     offUI.loadB = rb("Load", 44, function()
         local p = state.presets[state.preset]
         if type(p) ~= "table" then helpers.showToast("Preset " .. state.preset .. " is empty: press Store first", 3); return end
@@ -824,11 +828,10 @@ local function buildPanel(root)
     local clr = helpers.button(root, 0, 0, 44, H.BTN_H, "Clear", function() padStr = ""; padShow() end)
     local use = helpers.button(root, 0, 0, 44, H.BTN_H, "Use", function() padShow(); setItemFromBox() end)
     for _, k in ipairs({ del, clr, use }) do k.hidden = true; padKeys[#padKeys + 1] = k end
-    letterBtn = helpers.button(root, 0, 0, 90, H.BTN_H, "Letter: All", function()
-        letterIdx = letterIdx % #LETTERS + 1
-        helpers.setText(letterBtn, "Letter: " .. LETTERS[letterIdx], "label")
-        rebuildFilter(); goPage(1)
-    end)
+    letterBtn = helpers.dropdown(root, 0, 0, 100, H.BTN_H, { name = "letter",
+        options = function() local L = {}; for i, l in ipairs(LETTERS) do L[i] = "Letter: " .. l end; return L end,
+        get = function() return letterIdx end, set = function(i) letterIdx = i end,
+        onChange = function() rebuildFilter(); goPage(1) end })
     -- 0.1.23: page jumps in the standard pager (was ID jumps)
     for _, n in ipairs({ -100, -10, 10, 100 }) do
         local lbl = (n > 0 and "+" or "") .. n
@@ -940,7 +943,7 @@ local function buildPanel(root)
           set = function(i) state.on = i == 1; save(); helpers.setText(onBtn, onLabel(), "label") end },
         { label = "Position", options = POS_LABEL,
           get = function() return state.pos end,
-          set = function(i) state.pos = i; save(); helpers.setText(posBtn, POS_LABEL[state.pos], "label") end },
+          set = function(i) state.pos = i; save(); if posBtn then posBtn:refresh() end end },
         { label = "Sprite opacity", options = { "100%", "75%", "50%", "25%" },
           get = function() return state.alpha end, set = function(i) state.alpha = i; save() end },
     }

@@ -22,7 +22,7 @@
 
 local PLUGIN_NAME = "Cursor Sprite"
 local helpers = require("ui_helpers")
-helpers.VERSION = "0.1.24"
+helpers.VERSION = "0.1.25"
 local H = helpers
 
 -------------------------------------------------------------------------------
@@ -343,8 +343,15 @@ local RH = 28            -- 0.1.23: row height (24 px icon on a slot tile)
 local ICON = 24
 local COL_PAD, COL_GAP, CTRL_GAP = 8, 8, 8
 local ICON_W, ID_W = 28, 52
-local ID_X = COL_PAD + ICON_W + COL_GAP
-local NAME_X = ID_X + ID_W + COL_GAP
+local ID_X, NAME_X
+-- 0.1.25: adjustable ID column (shared helpers.columns); Name fills.
+local cols, idHandle = nil, nil
+local function recalcCols()
+    if cols ~= nil then ID_W = cols:get("id") end
+    ID_X = COL_PAD + ICON_W + COL_GAP
+    NAME_X = ID_X + ID_W + COL_GAP
+end
+recalcCols()
 local PANEL_W = 440
 local BG = { { 0x24/255, 0x21/255, 0x1E/255 }, { 0x2E/255, 0x2A/255, 0x26/255 } }
 
@@ -587,7 +594,8 @@ local function layout()
     helpers.safe(function() letterBtn:SetPos(-(COL_PAD + 100), y, 1.0, 0.0) end)
     y = y + H.BTN_H + 4
     helpers.safe(function() headCells.icon:SetPos(COL_PAD, y) end)
-    helpers.safe(function() headCells.idt:SetPos(ID_X, y) end)
+    helpers.safe(function() headCells.idt:SetPos(ID_X, y); headCells.idt:SetSize(ID_W, H.ROW_HEIGHT) end)
+    if idHandle then idHandle:place(NAME_X - COL_GAP // 2, y, H.ROW_HEIGHT) end
     helpers.safe(function() headCells.name:SetPos(NAME_X, y) end)
     local fav = state.favMode
     helpers.setText(headCells.name, H.gold(state.recentMode and "Recent" or (fav and "Favorite" or "Name")))
@@ -607,7 +615,7 @@ local function layout()
             rowBgs[r].colour = Vector4.new(k[1], k[2], k[3], 0.92); rowBgs[r]:SetPos(4, y)
         end)
         helpers.safe(function() c.tile:SetPos(COL_PAD + (ICON_W - 26) // 2, y + (RH - 26) // 2) end)
-        helpers.safe(function() c.idt:SetPos(ID_X, y + (RH - H.ROW_HEIGHT) // 2) end)
+        helpers.safe(function() c.idt:SetPos(ID_X, y + (RH - H.ROW_HEIGHT) // 2); c.idt:SetSize(ID_W, H.ROW_HEIGHT) end)
         helpers.safe(function() c.name:SetPos(NAME_X, y + (RH - H.ROW_HEIGHT) // 2); c.name:SetSize(nameW, H.ROW_HEIGHT, 1.0, 0.0) end)
         helpers.safe(function() c.off:SetPos(-(COL_PAD + 60 + 150), y + (RH - H.ROW_HEIGHT) // 2, 1.0, 0.0) end)
         helpers.safe(function() c.rm:SetPos(-(COL_PAD + 58), y + (RH - H.BTN_H) // 2, 1.0, 0.0) end)
@@ -873,9 +881,12 @@ local function buildPanel(root)
             rowBgs[r] = bg
         end)
     end
+    cols = helpers.columns("sprites", { id = { w = 52, min = 36, max = 160 } }, function() recalcCols(); pcall(layout) end)
+    recalcCols()
     headCells = { icon = newText(root, ICON_W + 8), idt = newText(root, ID_W), name = newText(root, -(NAME_X + COL_PAD)) }
     helpers.setText(headCells.icon, H.gold("Icon"))
     helpers.setText(headCells.idt, H.gold("ID"))
+    idHandle = cols:handle(root, "id", 1)
     helpers.setText(headCells.name, H.gold("Name"))
     headCells.saved = newText(root, 150)
     helpers.setText(headCells.saved, H.gold("Offset  Size  Rot"))

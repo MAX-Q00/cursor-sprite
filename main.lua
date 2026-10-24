@@ -22,7 +22,7 @@
 
 local PLUGIN_NAME = "Cursor Sprite"
 local helpers = require("ui_helpers")
-helpers.VERSION = "0.1.30"
+helpers.VERSION = "0.1.32"
 local H = helpers
 
 -------------------------------------------------------------------------------
@@ -559,22 +559,19 @@ local function layout()
     group(COL_PAD, y, offUI.x)
     group(COL2, y, offUI.y)
     y = y + H.BTN_H + 4
-    local DW = 44
+    -- 0.1.32: linear rows. Row 1: Left, Up, Down, Right, Step. Row 2: Reset,
+    -- Save position, Preset, Load, Store.
     local d = offUI.dpad
-    helpers.safe(function() d.up:SetPos(COL_PAD + DW + 2, y) end)
-    helpers.safe(function() d.left:SetPos(COL_PAD, y + H.BTN_H + 2) end)
-    helpers.safe(function() d.right:SetPos(COL_PAD + 2 * (DW + 2), y + H.BTN_H + 2) end)
-    helpers.safe(function() d.down:SetPos(COL_PAD + DW + 2, y + 2 * (H.BTN_H + 2)) end)
-    local rx = COL_PAD + 3 * (DW + 2) + 12
-    sx = rx
-    for _, c in ipairs({ { offUI.stepB, 74 }, { offUI.resetB, 48 }, { offUI.saveB, 96 } }) do
+    sx = COL_PAD
+    for _, c in ipairs({ { d.left, 44 }, { d.up, 44 }, { d.down, 44 }, { d.right, 44 }, { offUI.stepB, 74 } }) do
         helpers.safe(function() c[1]:SetPos(sx, y) end); sx = sx + c[2] + 4
     end
-    sx = rx
-    for _, c in ipairs({ { offUI.preB, 84 }, { offUI.loadB, 44 }, { offUI.storeB, 48 } }) do
-        helpers.safe(function() c[1]:SetPos(sx, y + 2 * (H.BTN_H + 2)) end); sx = sx + c[2] + 4
+    y = y + H.BTN_H + 4
+    sx = COL_PAD
+    for _, c in ipairs({ { offUI.resetB, 48 }, { offUI.saveB, 96 }, { offUI.preB, 84 }, { offUI.loadB, 44 }, { offUI.storeB, 48 } }) do
+        helpers.safe(function() c[1]:SetPos(sx, y) end); sx = sx + c[2] + 4
     end
-    y = y + 3 * (H.BTN_H + 2) + CTRL_GAP
+    y = y + H.BTN_H + CTRL_GAP
     -- line 2: merged search / item ID box, Use item, Keypad
     helpers.safe(function() searchField:SetPos(COL_PAD, y) end)
     helpers.safe(function() itemBtn:SetPos(-(COL_PAD + 56 + CTRL_GAP + 64), y, 1.0, 0.0) end)

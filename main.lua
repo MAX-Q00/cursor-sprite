@@ -22,7 +22,7 @@
 
 local PLUGIN_NAME = "Cursor Sprite"
 local helpers = require("ui_helpers")
-helpers.VERSION = "0.1.28"
+helpers.VERSION = "0.1.29"
 local H = helpers
 
 -------------------------------------------------------------------------------
